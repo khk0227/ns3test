@@ -66,8 +66,8 @@ def configure(conf):
         conf.report_optional_feature("nsc", "Network Simulation Cradle", False,
                                      "NSC not found (see option --with-nsc)")
         return
-    
-    if Options.platform in ['linux', 'freebsd']:
+
+    if Utils.unversioned_sys_platform() in ['linux', 'freebsd']:
         arch = os.uname()[4]
     else:
         arch = None
@@ -78,7 +78,7 @@ def configure(conf):
         conf.check_nonfatal(mandatory=True, lib='dl', define_name='HAVE_DL', uselib_store='DL')
         ok = True
     conf.msg('Checking for NSC supported architecture ' + (arch or ''), ok)
-    
+
     if not ok:
         conf.env['NSC_ENABLED'] = False
         conf.report_optional_feature("nsc", "Network Simulation Cradle", False,
@@ -152,9 +152,10 @@ def build(bld):
         'model/tcp-vegas.cc',
         'model/tcp-congestion-ops.cc',
         'model/tcp-westwood.cc',
-        'model/tcp-scalable.cc', 
+        'model/tcp-scalable.cc',
         'model/tcp-veno.cc',
         'model/tcp-bic.cc',
+        'model/tcp-cubic.cc',
         'model/tcp-yeah.cc',
         'model/tcp-ledbat.cc',
         'model/tcp-illinois.cc',
@@ -166,15 +167,6 @@ def build(bld):
         'model/tcp-option-rfc793.cc',
         'model/tcp-option-winscale.cc',
         'model/tcp-option-ts.cc',
-        'model/tcp-option-mptcp.cc',
-        'model/mptcp-crypto.cc',
-        'model/mptcp-socket-base.cc',
-        'model/mptcp-subflow.cc',
-        'model/mptcp-scheduler-round-robin.cc',
-        'model/mptcp-scheduler-fastest-rtt.cc',
-        'model/mptcp-mapping.cc',
-        'model/mptcp-ndiffports.cc',
-        'model/mptcp-fullmesh.cc',
         'model/tcp-option-sack-permitted.cc',
         'model/tcp-option-sack.cc',
         'model/ipv4-packet-info-tag.cc',
@@ -313,7 +305,6 @@ def build(bld):
         'model/udp-header.h',
         'model/tcp-header.h',
         'model/tcp-option.h',
-        'model/tcp-option-mptcp.h',
         'model/tcp-option-winscale.h',
         'model/tcp-option-ts.h',
         'model/tcp-option-sack-permitted.h',
@@ -323,7 +314,6 @@ def build(bld):
         'model/icmpv6-header.h',
         # used by routing
         'model/ipv4-interface.h',
-        'model/ipv4-end-point.h',
         'model/ipv4-l3-protocol.h',
         'model/ipv6-l3-protocol.h',
         'model/ipv6-extension.h',
@@ -400,6 +390,7 @@ def build(bld):
         'model/tcp-scalable.h',
         'model/tcp-veno.h',
         'model/tcp-bic.h',
+        'model/tcp-cubic.h',
         'model/tcp-yeah.h',
         'model/tcp-illinois.h',
         'model/tcp-htcp.h',
@@ -409,15 +400,6 @@ def build(bld):
         'model/tcp-socket-state.h',
         'model/tcp-tx-buffer.h',
         'model/tcp-rx-buffer.h',
-        'model/mptcp-crypto.h',
-        'model/mptcp-mapping.h',
-        'model/mptcp-subflow.h',
-        'model/mptcp-socket-base.h',
-        'model/mptcp-scheduler.h',
-        'model/mptcp-scheduler-round-robin.h',
-        'model/mptcp-scheduler-fastest-rtt.h',
-        'model/mptcp-ndiffports.h',
-        'model/mptcp-fullmesh.h',
         'model/tcp-recovery-ops.h',
         'model/tcp-prr-recovery.h',
         'model/rtt-estimator.h',
@@ -445,4 +427,3 @@ def build(bld):
         bld.recurse('examples')
 
     bld.ns3_python_bindings()
-

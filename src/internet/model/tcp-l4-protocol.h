@@ -27,7 +27,6 @@
 #include "ns3/ipv6-address.h"
 #include "ns3/sequence-number.h"
 #include "ip-l4-protocol.h"
-#include "tcp-congestion-ops.h"
 
 
 namespace ns3 {
@@ -38,13 +37,11 @@ class TcpHeader;
 class Ipv4EndPointDemux;
 class Ipv6EndPointDemux;
 class Ipv4Interface;
-class TcpSocket;
 class TcpSocketBase;
 class Ipv4EndPoint;
 class Ipv6EndPoint;
-class MpTcpSubflow;
 class NetDevice;
-class TcpCongestionOps;
+
 
 /**
  * \ingroup internet
@@ -130,9 +127,6 @@ public:
     *
     */
   Ptr<Socket> CreateSocket (TypeId congestionTypeId);
-  Ptr<Socket> CreateSocket (TypeId congestionTypeId, TypeId socketTypeId, bool);  // For MPTCP
-  Ptr<Socket> CreateSocket (Ptr<TcpCongestionOps> algo, TypeId socketTypeId);  // For MPTCP
-  void DumpSockets () const;                                                 // For MPTCP
 
   /**
    * \brief Allocate an IPv4 Endpoint
@@ -212,13 +206,6 @@ public:
                            Ipv6Address peerAddress, uint16_t peerPort);
 
   /**
-   * \brief finds if peer have valid token
-   * \token the key exchanged during 3WHS
-   */
-  Ptr<TcpSocket>
-  LookupMpTcpToken (uint32_t token);
-
-  /**
    * \brief Send a packet via TCP (IP-agnostic)
    *
    * \param pkt The packet to send
@@ -238,7 +225,7 @@ public:
    *
    * \param socket Socket to be added
    */
-  bool AddSocket (Ptr<TcpSocketBase> socket);
+  void AddSocket (Ptr<TcpSocketBase> socket);
 
   /**
    * \brief Remove a socket from the internal list

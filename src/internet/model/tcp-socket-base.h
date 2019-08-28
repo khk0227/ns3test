@@ -32,8 +32,6 @@
 #include "ns3/data-rate.h"
 #include "ns3/node.h"
 #include "ns3/tcp-socket-state.h"
-#include "ns3/ipv4-end-point.h"
-#include "tcp-tx-buffer.h"
 
 namespace ns3 {
 
@@ -43,9 +41,6 @@ class Node;
 class Packet;
 class TcpL4Protocol;
 class TcpHeader;
-class MpTcpSubflow;
-class MpTcpSocketBase;
-class TcpOptionMpTcpMain;
 class TcpCongestionOps;
 class TcpRecoveryOps;
 class RttEstimator;
@@ -127,7 +122,8 @@ public:
  * the main TcpCongestionOps class. Switching between congestion algorithm is
  * now a matter of setting a pointer into the TcpSocketBase class. The idea
  * and the interfaces are inspired by the Linux operating system, and in
- * particular from the structure tcp_congestion_ops.
+ * particular from the structure tcp_congestion_ops. The reference paper is
+ * https://www.sciencedirect.com/science/article/pii/S1569190X15300939.
  *
  * Transmission Control Block (TCB)
  * --------------------------------
@@ -213,7 +209,8 @@ public:
  * On the other side, inside TcpTxBuffer the received options (that contain
  * the SACK block) are processed and a particular data structure, called Scoreboard,
  * is filled. Please take a look at TcpTxBuffer and TcpRxBuffer documentation if
- * you need more information.
+ * you need more information. The reference paper is
+ * https://dl.acm.org/citation.cfm?id=3067666.
  *
  */
 class TcpSocketBase : public TcpSocket
@@ -270,7 +267,6 @@ public:
    * \param rtt the RTT estimator
    */
   virtual void SetRtt (Ptr<RttEstimator> rtt);
-  virtual TcpSocket::TcpStates_t GetState() const;
 
   /**
    * \brief Sets the Minimum RTO.
@@ -561,7 +557,7 @@ public:
   virtual int GetSockName (Address &address) const; // Return local addr:port in address
   virtual int GetPeerName (Address &address) const;
   virtual void BindToNetDevice (Ptr<NetDevice> netdevice); // NetDevice with my m_endPoint
-  virtual uint32_t GetSegSize (void) const;
+
   /**
    * TracedCallback signature for tcp packet transmission or reception events.
    *
@@ -581,6 +577,7 @@ protected:
   virtual void     SetRcvBufSize (uint32_t size);
   virtual uint32_t GetRcvBufSize (void) const;
   virtual void     SetSegSize (uint32_t size);
+  virtual uint32_t GetSegSize (void) const;
   virtual void     SetInitialSSThresh (uint32_t threshold);
   virtual uint32_t GetInitialSSThresh (void) const;
   virtual void     SetInitialCwnd (uint32_t cwnd);
@@ -611,19 +608,19 @@ protected:
    *
    * \returns 0 on success, -1 on failure
    */
-  virtual int SetupCallback (void);
+  int SetupCallback (void);
 
   /**
    * \brief Perform the real connection tasks: Send SYN if allowed, RST if invalid
    *
    * \returns 0 on success
    */
-  virtual int DoConnect (void);
+  int DoConnect (void);
 
   /**
    * \brief Schedule-friendly wrapper for Socket::NotifyConnectionSucceeded()
    */
-  virtual void ConnectionSucceeded (void);
+  void ConnectionSucceeded (void);
 
   /**
    * \brief Configure the endpoint to a local address. Called by Connect() if Bind() didn't specify one.
@@ -676,7 +673,7 @@ protected:
    * \param port the remote port
    * \param incomingInterface the incoming interface
    */
-  virtual void ForwardUp (Ptr<Packet> packet, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> incomingInterface);
+  void ForwardUp (Ptr<Packet> packet, Ipv4Header header, uint16_t port, Ptr<Ipv4Interface> incomingInterface);
 
   /**
    * \brief Called by the L3 protocol when it received a packet to pass on to TCP.
@@ -733,7 +730,7 @@ protected:
    * \param withAck forces an ACK to be sent
    * \returns the number of packets sent
    */
-  virtual uint32_t SendPendingData (bool withAck = false);
+  uint32_t SendPendingData (bool withAck = false);
 
   /**
    * \brief Extract at most maxSize bytes from the TxBuffer at sequence seq, add the
@@ -752,17 +749,11 @@ protected:
    * \param flags the packet's flags
    */
   virtual void SendEmptyPacket (uint8_t flags);
-  /**
-   * \brief
-   * \param header A valid TCP header
-   * \param p Packet to send. May be empty.
-   */
-  virtual void SendPacket(TcpHeader header, Ptr<Packet> p);
 
   /**
    * \brief Send reset and tear down this socket
    */
-  virtual void SendRST (void);
+  void SendRST (void);
 
   /**
    * \brief Check if a sequence number range is within the rx window
@@ -771,7 +762,7 @@ protected:
    * \param tail end of the Sequence window
    * \returns true if it is in range
    */
-  virtual bool OutOfRange (SequenceNumber32 head, SequenceNumber32 tail) const;
+  bool OutOfRange (SequenceNumber32 head, SequenceNumber32 tail) const;
 
 
   // Helper functions: Connection close
@@ -781,12 +772,12 @@ protected:
    *
    * \returns 0 on success
    */
-  virtual int DoClose (void);
+  int DoClose (void);
 
   /**
    * \brief Peacefully close the socket by notifying the upper layer and deallocate end point
    */
-  virtual void CloseAndNotify (void);
+  void CloseAndNotify (void);
 
   /**
    * \brief Kill this socket by zeroing its attributes (IPv4)
@@ -794,7 +785,7 @@ protected:
    * This is a callback function configured to m_endpoint in
    * SetupCallback(), invoked when the endpoint is destroyed.
    */
-  virtual void Destroy (void);
+  void Destroy (void);
 
   /**
    * \brief Kill this socket by zeroing its attributes (IPv6)
@@ -802,12 +793,12 @@ protected:
    * This is a callback function configured to m_endpoint in
    * SetupCallback(), invoked when the endpoint is destroyed.
    */
-  virtual void Destroy6 (void);
+  void Destroy6 (void);
 
   /**
    * \brief Deallocate m_endPoint and m_endPoint6
    */
-  virtual void DeallocateEndPoint (void);
+  void DeallocateEndPoint (void);
 
   /**
    * \brief Received a FIN from peer, notify rx buffer
@@ -815,22 +806,22 @@ protected:
    * \param p the packet
    * \param tcpHeader the packet's TCP header
    */
-  virtual void PeerClose (Ptr<Packet> p, const TcpHeader& tcpHeader);
+  void PeerClose (Ptr<Packet> p, const TcpHeader& tcpHeader);
 
   /**
    * \brief FIN is in sequence, notify app and respond with a FIN
    */
-  virtual void DoPeerClose (void);
+  void DoPeerClose (void);
 
   /**
    * \brief Cancel all timer when endpoint is deleted
    */
-  virtual void CancelAllTimers (void);
+  void CancelAllTimers (void);
 
   /**
    * \brief Move from CLOSING or FIN_WAIT_2 to TIME_WAIT state
    */
-  virtual void TimeWait (void);
+  void TimeWait (void);
 
   // State transition functions
 
@@ -842,7 +833,7 @@ protected:
    * \param packet the packet
    * \param tcpHeader the packet's TCP header
    */
-  virtual void ProcessEstablished (Ptr<Packet> packet, const TcpHeader& tcpHeader); // Received a packet upon ESTABLISHED state
+  void ProcessEstablished (Ptr<Packet> packet, const TcpHeader& tcpHeader); // Received a packet upon ESTABLISHED state
 
   /**
    * \brief Received a packet upon LISTEN state.
@@ -852,7 +843,7 @@ protected:
    * \param fromAddress the source address
    * \param toAddress the destination address
    */
-  virtual void ProcessListen (Ptr<Packet> packet, const TcpHeader& tcpHeader,
+  void ProcessListen (Ptr<Packet> packet, const TcpHeader& tcpHeader,
                       const Address& fromAddress, const Address& toAddress);
 
   /**
@@ -861,7 +852,7 @@ protected:
    * \param packet the packet
    * \param tcpHeader the packet's TCP header
    */
-  virtual void ProcessSynSent (Ptr<Packet> packet, const TcpHeader& tcpHeader);
+  void ProcessSynSent (Ptr<Packet> packet, const TcpHeader& tcpHeader);
 
   /**
    * \brief Received a packet upon SYN_RCVD.
@@ -871,7 +862,7 @@ protected:
    * \param fromAddress the source address
    * \param toAddress the destination address
    */
-  virtual void ProcessSynRcvd (Ptr<Packet> packet, const TcpHeader& tcpHeader,
+  void ProcessSynRcvd (Ptr<Packet> packet, const TcpHeader& tcpHeader,
                        const Address& fromAddress, const Address& toAddress);
 
   /**
@@ -880,7 +871,7 @@ protected:
    * \param packet the packet
    * \param tcpHeader the packet's TCP header
    */
-  virtual void ProcessWait (Ptr<Packet> packet, const TcpHeader& tcpHeader);
+  void ProcessWait (Ptr<Packet> packet, const TcpHeader& tcpHeader);
 
   /**
    * \brief Received a packet upon CLOSING
@@ -888,7 +879,7 @@ protected:
    * \param packet the packet
    * \param tcpHeader the packet's TCP header
    */
- virtual void ProcessClosing (Ptr<Packet> packet, const TcpHeader& tcpHeader);
+  void ProcessClosing (Ptr<Packet> packet, const TcpHeader& tcpHeader);
 
   /**
    * \brief Received a packet upon LAST_ACK
@@ -896,7 +887,7 @@ protected:
    * \param packet the packet
    * \param tcpHeader the packet's TCP header
    */
-  virtual void ProcessLastAck (Ptr<Packet> packet, const TcpHeader& tcpHeader);
+  void ProcessLastAck (Ptr<Packet> packet, const TcpHeader& tcpHeader);
 
   // Window management
 
@@ -950,7 +941,8 @@ protected:
    *
    * \param header TcpHeader from which to extract the new window value
    */
-  virtual bool UpdateWindowSize (const TcpHeader& header);
+  void UpdateWindowSize (const TcpHeader& header);
+
 
   // Manage data tx/rx
 
@@ -1042,7 +1034,7 @@ protected:
    * \brief Retransmit the first segment marked as lost, without considering
    * available window nor pacing.
    */
-  virtual void DoRetransmit (void);
+  void DoRetransmit (void);
 
   /** \brief Add options to TcpHeader
    *
@@ -1051,45 +1043,7 @@ protected:
    *
    * \param tcpHeader TcpHeader to add options to
    */
-  virtual void AddOptions (TcpHeader& tcpHeader);
-
-  /**
-   * This function first generates a copy of the current socket as an MpTcpSubflow.
-   * Then it upgrades the current socket to an MpTcpSocketBase via the use of
-   * "placement new", i.e. it does not allocate new memory but reuse the memory at "this"
-   * address to instantiate MpTcpSocketBase.
-   * Finally the master socket is associated to the meta.
-   *
-   * It is critical that enough memory was allocated beforehand to contain MpTcpSocketBase
-   * (see how it's done for now in TcpL4Protocol).
-   * Ideally MpTcoSocketBase would take less memory than TcpSocketBase, so one of the goal should be to let
-   * MpTcpSocketBase inherit directly from TcpSocket rather than TcpSocketBase.
-   *
-   * The function does not register the new subflow in m_tcp->AddSocket, this should be taken care
-   * of afterwards.
-   *
-   * \param master
-   * \return master subflow. It is not associated to the meta at this point
-   */
-  virtual Ptr<MpTcpSubflow> UpgradeToMeta();
-
-  /**
-   * \return if it returns 1, we need to upgrade the meta socket
-   * if negative then it should discard the packet ?
-   */
-  virtual int ProcessTcpOptions(const TcpHeader& header);
-
-  /**
-   * \brief In this baseclass, this only deals with MpTcpCapable options in order to know if the socket
-   * should be converted to an MPTCP meta socket.
-   */
-  virtual int ProcessOptionMpTcp(const Ptr<const TcpOption> option);
-
-  /**
-   * \brief Generate a unique key for this host
-   * \see mptcp_set_key_sk
-   */
-  virtual uint64_t GenerateUniqueMpTcpKey() ;
+  void AddOptions (TcpHeader& tcpHeader);
 
   /**
    * \brief Read TCP options before Ack processing
@@ -1100,7 +1054,7 @@ protected:
    * \param scoreboardUpdated indicates if the scoreboard was updated due to a
    * SACK option
    */
-  virtual void ReadOptions (const TcpHeader &tcpHeader, bool &scoreboardUpdated);
+  void ReadOptions (const TcpHeader &tcpHeader, bool &scoreboardUpdated);
 
   /**
    * \brief Return true if the specified option is enabled
@@ -1108,7 +1062,7 @@ protected:
    * \param kind kind of TCP option
    * \return true if the option is enabled
    */
-  virtual bool IsTcpOptionEnabled (uint8_t kind) const;
+  bool IsTcpOptionEnabled (uint8_t kind) const;
 
   /**
    * \brief Read and parse the Window scale option
@@ -1118,7 +1072,7 @@ protected:
    *
    * \param option Window scale option read from the header
    */
-  virtual void ProcessOptionWScale (const Ptr<const TcpOption> option);
+  void ProcessOptionWScale (const Ptr<const TcpOption> option);
   /**
    * \brief Add the window scale option to the header
    *
@@ -1127,13 +1081,7 @@ protected:
    *
    * \param header TcpHeader where the method should add the window scale option
    */
-  virtual void AddOptionWScale (TcpHeader& header);
-
-  /**
-   * \brief Add the mptcp option to the header
-   * \param header TcpHeader where the method should add mptcp option
-   */
-  virtual void AddMpTcpOptions (TcpHeader& header);
+  void AddOptionWScale (TcpHeader& header);
 
   /**
    * \brief Calculate window scale value based on receive buffer space
@@ -1221,12 +1169,6 @@ protected:
   void AddSocketTags (const Ptr<Packet> &p) const;
 
 protected:
-  //mptcp classes declared as friends
-  friend class MpTcpSocketBase;
-  friend class MpTcpSubflow;
-  friend class MpTcpSchedulerRoundRobin;
-  friend class MpTcpSchedulerFastestRTT;
-
   // Counters and events
   EventId           m_retxEvent     {}; //!< Retransmission event
   EventId           m_lastAckEvent  {}; //!< Last ACK timeout event
@@ -1291,12 +1233,6 @@ protected:
   TracedValue<uint32_t> m_advWnd             {0};  //!< Advertised Window size
   TracedValue<SequenceNumber32> m_highRxMark {0};  //!< Highest seqno received
   TracedValue<SequenceNumber32> m_highRxAckMark {0}; //!< Highest ack received
-
-  // MPTCP variables
-  bool        m_mptcpEnabled   {true};         //!< Window Scale option enabled
-  uint64_t    m_mptcpLocalKey  {0};        //!< MPTCP key
-  uint32_t    m_mptcpLocalToken{0};      //!< Hash of the key
-  uint32_t    m_mptcpPeerToken {0};      //!< Hash of the key
 
   // Options
   bool    m_sackEnabled       {true}; //!< RFC SACK option enabled

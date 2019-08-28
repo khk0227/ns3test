@@ -681,9 +681,13 @@ public:
    * \brief Manually set the socket priority
    *
    * This method corresponds to using setsockopt () SO_PRIORITY of
-   * real network or BSD sockets.
+   * real network or BSD sockets. On Linux, the socket priority can be
+   * set to a value in the range [0..6], unless the user process has the
+   * CAP_NET_ADMIN capability (see the man page for socket). ns-3 allows
+   * users to set the socket priority to any 8-bit non-negative value,
+   * which is equivalent to assuming that the CAP_NET_ADMIN capability is set.
    *
-   * \param priority The socket priority (in the range 0..6)
+   * \param priority The socket priority
    */
   void SetPriority (uint8_t priority);
 
@@ -981,16 +985,6 @@ public:
   virtual void Ipv6LeaveGroup (void);
 
 protected:
-  Callback<void, Ptr<Socket> >                   m_connectionSucceeded;  //!< connection succeeded callback
-  Callback<void, Ptr<Socket> >                   m_connectionFailed;     //!< connection failed callback
-  Callback<void, Ptr<Socket> >                   m_normalClose;          //!< connection closed callback
-  Callback<void, Ptr<Socket> >                   m_errorClose;           //!< connection closed due to errors callback
-  Callback<bool, Ptr<Socket>, const Address &>   m_connectionRequest;    //!< connection request callback
-  Callback<void, Ptr<Socket>, const Address&>    m_newConnectionCreated; //!< connection created callback
-  Callback<void, Ptr<Socket>, uint32_t>          m_dataSent;             //!< data sent callback
-  Callback<void, Ptr<Socket>, uint32_t >         m_sendCb;               //!< packet sent callback
-  Callback<void, Ptr<Socket> >                   m_receivedData;         //!< data received callback
-
   /**
    * \brief Notify through the callback (if set) that the connection has been
    *        established.
@@ -1084,6 +1078,15 @@ protected:
   Ipv6Address m_ipv6MulticastGroupAddress; //!< IPv6 multicast group address.
 
 private:
+  Callback<void, Ptr<Socket> >                   m_connectionSucceeded;  //!< connection succeeded callback
+  Callback<void, Ptr<Socket> >                   m_connectionFailed;     //!< connection failed callback
+  Callback<void, Ptr<Socket> >                   m_normalClose;          //!< connection closed callback
+  Callback<void, Ptr<Socket> >                   m_errorClose;           //!< connection closed due to errors callback
+  Callback<bool, Ptr<Socket>, const Address &>   m_connectionRequest;    //!< connection request callback
+  Callback<void, Ptr<Socket>, const Address&>    m_newConnectionCreated; //!< connection created callback
+  Callback<void, Ptr<Socket>, uint32_t>          m_dataSent;             //!< data sent callback
+  Callback<void, Ptr<Socket>, uint32_t >         m_sendCb;               //!< packet sent callback
+  Callback<void, Ptr<Socket> >                   m_receivedData;         //!< data received callback
 
   uint8_t m_priority; //!< the socket priority
 
